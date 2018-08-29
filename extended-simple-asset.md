@@ -54,6 +54,32 @@ with
 existing := ctx.GetCallData().([]byte)
 ```
 
+Note that the Read function implements the repeated code slightly differently due to its alternate return type. You then can update the `if` to check the length of existing as it will no longer return using nil. Replace:
+
+```
+if existing == nil {
+```
+
+with
+
+```
+if len(existing) == 0
+```
+
+in the Update and Read functions and replace:
+
+```
+if existing != nil {
+```
+
+with
+
+```
+if len(existing) > 0
+```
+
+in the Create function.
+
 ## Performing a custom action when a user passes an unknown function name
 By default when a user passes an unknown function an error will be returned to them telling them that a function of that name doesn't exist. It is possible to use the contract api to set a custom function to handle this occurance, throwing a custom error or even returning a success message. Like with the before function above it is not necessary for the unknown function to be public or a method of the struct used in creating the chaincode it just needs to match the format of what is an allowed function in our chaincode outlined in [simple-asset.md](simple-asset.md#adding-functions-to-manage-our-asset). Again it is possible to use a public (or private function) of the struct used in creating the chaincode.
 
