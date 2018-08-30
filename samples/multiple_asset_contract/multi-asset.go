@@ -61,7 +61,7 @@ func (sa *SimpleAsset) Read(ctx *contractapi.TransactionContext, assetID string)
 type ComplexAsset struct {
 	contractapi.Contract
 	Owner string `json:"owner"`
-	Value int    `json:value`
+	Value int    `json:"value"`
 }
 
 // Create - Initialises a complex asset with the given ID in the world state

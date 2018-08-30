@@ -8,7 +8,7 @@ First lets start by adding a type definition for the second asset. As we want th
 type ComplexAsset struct {
     contractapi.Contract
     Owner string `json:"owner"`
-	Value int    `json:value`
+	Value int    `json:"value"`
 }
 ```
 
@@ -374,7 +374,7 @@ func (sa *SimpleAsset) Read(ctx *contractapi.TransactionContext, assetID string)
 type ComplexAsset struct {
 	contractapi.Contract
 	Owner string `json:"owner"`
-	Value int    `json:value`
+	Value int    `json:"value"`
 }
 
 // Create - Initialises a complex asset with the given ID in the world state
