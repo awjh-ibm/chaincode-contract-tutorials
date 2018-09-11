@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package main
 
 import (
@@ -7,15 +13,21 @@ import (
 	"github.com/hyperledger/fabric/core/chaincode/contractapi"
 )
 
+// CustomTransactionContext - extends contractapi.TransactionContext with a field to store retrieved simple assets
+type CustomTransactionContext struct {
+	contractapi.TransactionContext
+	callData []byte
+}
+
 type SimpleAsset struct {
 	contractapi.Contract
 }
 
 // Create - Initialises a simple asset with the given ID in the world state
-func (sa *SimpleAsset) Create(ctx *contractapi.TransactionContext, assetID string) error {
-	existing := ctx.GetCallData().([]byte)
+func (sa *SimpleAsset) Create(ctx *CustomTransactionContext, assetID string) error {
+	existing := ctx.callData
 
-	if len(existing) > 0 {
+	if existing != nil {
 		return fmt.Errorf("Cannot create asset. Asset with id %s already exists", assetID)
 	}
 
@@ -29,10 +41,10 @@ func (sa *SimpleAsset) Create(ctx *contractapi.TransactionContext, assetID strin
 }
 
 // Update - Updates a simple asset with given ID in the world state
-func (sa *SimpleAsset) Update(ctx *contractapi.TransactionContext, assetID string, value string) error {
-	existing := ctx.GetCallData().([]byte)
+func (sa *SimpleAsset) Update(ctx *CustomTransactionContext, assetID string, value string) error {
+	existing := ctx.callData
 
-	if len(existing) == 0 {
+	if existing == nil {
 		return fmt.Errorf("Cannot update asset. Asset with id %s does not exist", assetID)
 	}
 
@@ -46,17 +58,17 @@ func (sa *SimpleAsset) Update(ctx *contractapi.TransactionContext, assetID strin
 }
 
 // Read - Returns value of a simple asset with given ID from world state as string
-func (sa *SimpleAsset) Read(ctx *contractapi.TransactionContext, assetID string) (string, error) {
-	existing := ctx.GetCallData().([]byte)
+func (sa *SimpleAsset) Read(ctx *CustomTransactionContext, assetID string) (string, error) {
+	existing := ctx.callData
 
-	if len(existing) == 0 {
+	if existing == nil {
 		return "", fmt.Errorf("Cannot read asset. Asset with id %s does not exist", assetID)
 	}
 
-	return string(string(existing)), nil
+	return string(existing), nil
 }
 
-func getAsset(ctx *contractapi.TransactionContext, assetID string) error {
+func getAsset(ctx *CustomTransactionContext, assetID string) error {
 
 	existing, err := ctx.GetStub().GetState(assetID)
 
@@ -64,7 +76,7 @@ func getAsset(ctx *contractapi.TransactionContext, assetID string) error {
 		return errors.New("Unable to interact with world state")
 	}
 
-	ctx.SetCallData(existing)
+	ctx.callData = existing
 
 	return nil
 }
@@ -75,8 +87,9 @@ func handleUnknown(args []string) error {
 
 func main() {
 	sac := new(SimpleAsset)
-	sac.SetBeforeFn(getAsset)
-	sac.SetUnknownFn(handleUnknown)
+	sac.SetTransactionContextHandler(new(CustomTransactionContext))
+	sac.SetBeforeTransaction(getAsset)
+	sac.SetUnknownTransaction(handleUnknown)
 
 	if err := contractapi.CreateNewChaincode(sac); err != nil {
 		fmt.Printf("Error starting SimpleAsset chaincode: %s", err)

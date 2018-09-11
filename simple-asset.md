@@ -22,7 +22,7 @@ touch sacc.go
 ```
 
 ### Housekeeping
-First lets start with some housekeeping. As with every chaincode ours must implement the [Chaincode Interface](https://godoc.org/github.com/hyperledger/fabric/core/chaincode/shim#Chaincode), fortunately the Contract API has a Struct call Contract which implements this and saves us having to write our own implementation. So lets start with importing the Contract API package. Next, let's add a struct `SimpleAsset` which will provide the functions to manage our asset and embed `contractapi.Contract` to ensure it can be used in chaincode.
+First lets start with some housekeeping. As with every chaincode ours must implement the [Chaincode Interface](https://godoc.org/github.com/hyperledger/fabric/core/chaincode/shim#Chaincode), fortunately the Contract API has a Struct called Contract which implements this and saves us having to write our own implementation. So lets start with importing the Contract API package. Next, let's add a struct `SimpleAsset` which will provide the functions to manage our asset and embed `contractapi.Contract` to ensure it can be used in chaincode.
 
 ```
 package main
@@ -38,11 +38,11 @@ type SimpleAsset struct {
 
 ### Adding functions to manage our asset
 Functions that are to be exported to our chaincode must act against a struct embedding contractapi.Contract and must be made public. They also must fit a specific format, they may take in zero or more arguments and return zero, one or two values. The arguments taken in can be any of the following:
-- *contractapi.TransactionContext
+- *contractapi.TransactionContext (or a custom TransactionContext extending this)
 - string
 - []string
 
-Any number of string parameters may be taken in however only zero or one parameter may be of types *contractapi.TransactionContext and []string. There is also the limitation that if a parameter of type *contractapi.TransactionContext is taken in then it must be the first parameter in the definition. If a parameter of type []string is taken in this must be the last listed parameter in the definition.
+Any number of string parameters may be taken in however only zero or one parameter may be of each of the types TransactionContext and []string. There is also the limitation that if a parameter of type TransactionContext is taken in then it must be the first parameter in the definition. If a parameter of type []string is taken in this must be the last listed parameter in the definition.
 
 Functions can be defined to return zero, one or two values. These can be of types:
 - string
@@ -79,7 +79,7 @@ func (sa *SimpleAsset) Create(ctx *contractapi.TransactionContext, assetID strin
 The above function uses the stub from the transaction context to read and write data to the world state. It checks whether it can connect to the world state, if an asset with that ID exists already and then writes an initial value for the asset. As the function only returns an error type the peer response to the request will be a blank string success unless an error is specified.
 
 #### Update
-The second function we write will take in an ID of an asset to update the value for and the value to update it to:
+The second function we write will take in an ID of an asset to update and the value to update it to:
 
 ```
 // Update - Updates a simple asset with given ID in the world state
@@ -283,20 +283,20 @@ docker exec -it cli bash
 peer chaincode install -p chaincodedev/chaincode/simple_asset_contract -n mycc -v 0
 ```
 
-When instantiating, invoking or querying a chaincode created using the contractapi we must pass as the first argument the namespace and function name of the contract we wish to call and then the arguments to pass in to the function. In the code we have set up there is only one contract used in the chaincode and we did not set a namespace therefore we use the default namespace `contract`. When instantiating we shall create a first instance of an asset in the world state with the ID `ASSET_1` using the create function.
+When instantiating, invoking or querying a chaincode created using the contractapi we must pass as the first argument the function we wish to call and then the arguments to pass in to the function. When instantiating we shall create a first instance of an asset in the world state with the ID `ASSET_1` using the create function.
 
 ```
-peer chaincode instantiate -n mycc -v 0 -c '{"Args":["contract_Create","ASSET_1"]}' -C myc
+peer chaincode instantiate -n mycc -v 0 -c '{"Args":["Create","ASSET_1"]}' -C myc
 ```
 
 Now we can issue an invoke to update the value of “ASSET_1” to “Updated”. Notice that when passing arguments they are evaluated left to right such that the first argument is the namespace and function to call, the second is then the first string parameter, the third the second string parameter and so on for further string parameters.
 
 ```
-peer chaincode invoke -n mycc -c '{"Args":["contract_Update", "ASSET_1", "Updated"]}' -C myc
+peer chaincode invoke -n mycc -c '{"Args":["Update", "ASSET_1", "Updated"]}' -C myc
 ```
 
 Finally, query ASSET_1. We should see a value of Updated.
 
 ```
-peer chaincode query -n mycc -c '{"Args":["contract_Read","ASSET_1"]}' -C myc
+peer chaincode query -n mycc -c '{"Args":["Read","ASSET_1"]}' -C myc
 ```
