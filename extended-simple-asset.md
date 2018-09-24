@@ -3,7 +3,7 @@
 ## Calling functions every time a request is made
 Sometimes functions in a contract may all have to repeat the same task. The Contract API provides provision for you to set a function to be called before and after each time a contract used in the chaincode is called.
 
-For example each function in the [simple asset chaincode](samples/simple_asset_contract/simple-asset.go) performs the same action at the start, reading the world state using the passed asset ID. We could therefore define a function to be called before each call to perform this action. We can then use the returned data in our already defined functions by storing it in the transaction context. To do this we must define our own custom transaction context which contains space to store this value:
+For example each function in the [simple asset chaincode](samples/simple_asset_contract/simple-asset.go) performs the same action at the start, reading the world state using the passed asset ID. We could therefore define a function to be called before each call to perform this action. We can then use the returned asset in our already defined functions by storing it in the transaction context. To do this we must define our own custom transaction context which contains space to store this value:
 
 ```
 // CustomTransactionContext - extends contractapi.TransactionContext with a field to store retrieved simple assets
@@ -47,7 +47,7 @@ func getAsset(ctx *CustomTransactionContext, assetID string) error {
 
 The function sets the call data to be the value from the world state of the asset with the passed ID. Notice that the passed ID parameter is in the same position in the function declaration as it is in the other function declarations of the simple asset chaincode. This is key as the before function receives the same data as is passed in to the named function. There are functions named such as Update in the simple asset chaincode which take in more parameters, the above function as it has fewer parameters will not be passed the extra data when called. If the above function returns a non nil error then the response to the peer will be that error and the named function will not be called.
 
-We must tell the chaincode to use this function before each function call and therefore in the main function BEFORE we call `contractapi.CreateNewChaincode` but AFTER we set the transaction context handler. Notice that the function above is not linked to our simple asset struct nor is it public however it can still be used as a set function, it however cannot be called by itself by a user initialising, invoking or querying. It is perfectly possible however to use a function that is available for a user making such calls as a set function. The rule being for set functions that they must match the format of what is an allowed function in our chaincode outlined in [simple-asset.md](simple-asset.md#adding-functions-to-manage-our-asset).
+We must tell the chaincode to use this function before each function call and therefore we must call `SetBeforeTransaction` in the main function BEFORE we call `contractapi.CreateNewChaincode` but AFTER we set the transaction context handler. Notice that the function above is not linked to our simple asset struct nor is it public however it can still be used as a set function, it however cannot be called by itself by a user initialising, invoking or querying. It is perfectly possible however to use a function that is available for a user making such calls as a set function. The rule being for set functions that they must match the format of what is an allowed function in our chaincode outlined in [simple-asset.md](simple-asset.md#adding-functions-to-manage-our-asset).
 
 Update the main function to include `sac.SetBeforeTransaction` to set the above function to be called every time a user makes a call to the simple asset contract:
 
@@ -83,17 +83,19 @@ existing := ctx.callData
 Note that the Read function implements the repeated code slightly differently due to its alternate return type.
 
 ## Performing a custom action when a user passes an unknown function name
-By default when a user passes an unknown function an error will be returned to them telling them that a function of that name doesn't exist. It is possible to use the contract API to set a custom function to handle this occurrence, throwing a custom error or even returning a success message. Like with the before function above it is not necessary for the unknown function to be public or a method of the struct used in creating the chaincode it just needs to match the format of what is an allowed function in our chaincode as outlined in [simple-asset.md](simple-asset.md#adding-functions-to-manage-our-asset). Again it is possible to use a public (or private function) of the struct used in creating the chaincode.
+By default when a user passes an unknown function an error will be returned to them telling them that a function of that name doesn't exist. It is possible to use the contract API to set a custom function to handle this occurrence, throwing a custom error or even returning a success message. Like with the before function above it is not necessary for the unknown function to be public or a method of the struct used in creating the chaincode, it merely needs to match the format of what is an allowed function in our chaincode as outlined in [simple-asset.md](simple-asset.md#adding-functions-to-manage-our-asset). Again it is possible to use a public (or private function) of the struct used in creating the chaincode.
 
 Here is a function for custom handling of an unknown function name being passed:
 
 ```
-func handleUnknown(args []string) error {
-    return fmt.Errorf("Unknown function name passed with args %v", args)
+func handleUnknown(ctx *CustomTransactionContext) error {
+	fn, args := ctx.GetStub().GetFunctionAndParameters()
+
+    return fmt.Errorf("Unknown function name %s passed with args %v", fn, args)
 }
 ```
 
-The above function takes in the string array and no other named parameters meaning that the string array consists of all the arguments passed by the user in their call. The function then returns an error which will be returned as the peer's response. 
+The above function takes in the context and uses the stub to get the details of what was passed by the call. The function then returns an error which will be returned as the peer's response. 
 
 Update the main function to include `sac.SetUnknownTransaction` to set the above function to be called every time a user makes a call to the simple asset contract with an unknown function name:
 
@@ -190,8 +192,10 @@ func getAsset(ctx *CustomTransactionContext, assetID string) error {
 	return nil
 }
 
-func handleUnknown(args []string) error {
-	return fmt.Errorf("Unknown function name passed with args %v", args)
+func handleUnknown(ctx *CustomTransactionContext) error {
+	fn, args := ctx.GetStub().GetFunctionAndParameters()
+
+    return fmt.Errorf("Unknown function name %s passed with args %v", fn, args)
 }
 
 func main() {

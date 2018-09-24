@@ -39,16 +39,27 @@ type SimpleAsset struct {
 ### Adding functions to manage our asset
 Functions that are to be exported to our chaincode must act against a struct embedding contractapi.Contract and must be made public. They also must fit a specific format, they may take in zero or more arguments and return zero, one or two values. The arguments taken in can be any of the following:
 - *contractapi.TransactionContext (or a custom TransactionContext extending this)
-- string
-- []string
+- basic Go types:
+	- string
+	- bool
+	- int (including int8, int16, int32 and int64)
+	- uint (including uint8, uint16, uint32 and uint64)
+	- float32
+	- float64
 
-Any number of string parameters may be taken in however only zero or one parameter may be of each of the types TransactionContext and []string. There is also the limitation that if a parameter of type TransactionContext is taken in then it must be the first parameter in the definition. If a parameter of type []string is taken in this must be the last listed parameter in the definition.
+
+Only zero or one parameter may be of each of the type TransactionContext. There is also the limitation that if a parameter of type TransactionContext is taken in then it must be the first parameter in the definition. Any number of the other types may be taken. They may also take aliases for the above such as byte or rune. An array of slice of the basic Go types may also be taken.
 
 Functions can be defined to return zero, one or two values. These can be of types:
 - string
+- bool
+- int (including int8, int16, int32 and int64)
+- uint (including uint8, uint16, uint32 and uint64)
+- float32
+- float64
 - error
 
-At most one string and one error can be returned. If no error is returned the value of the string will be returned to the chaincode interaction request.
+At most one non-error type and one error can be returned. If no error is returned or the error value is nil the value of the other type will be returned to the chaincode interaction request. If nothing is returned then a blank string is returned. An array or slice of the non-error types may also be returned. These will be converted to a JSON format.
 
 #### Create
 The first function we will write will be a create function for the asset. The function will take in an ID for the asset and initialise it in the world state:

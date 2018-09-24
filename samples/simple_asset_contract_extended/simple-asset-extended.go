@@ -81,8 +81,10 @@ func getAsset(ctx *CustomTransactionContext, assetID string) error {
 	return nil
 }
 
-func handleUnknown(args []string) error {
-	return fmt.Errorf("Unknown function name passed with args %v", args)
+func handleUnknown(ctx *CustomTransactionContext) error {
+	fn, args := ctx.GetStub().GetFunctionAndParameters()
+
+	return fmt.Errorf("Unknown function name %s passed with args %v", fn, args)
 }
 
 func main() {

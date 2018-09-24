@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/hyperledger/fabric/core/chaincode/contractapi"
 )
@@ -89,8 +88,9 @@ func (sa *SimpleAsset) Read(ctx *CustomTransactionContext, assetID string) (stri
 
 type ComplexAsset struct {
 	contractapi.Contract
-	Owner string `json:"owner"`
-	Value int    `json:"value"`
+	Owner  string   `json:"owner"`
+	Value  int      `json:"value"`
+	Colour []string `json:"colour"`
 }
 
 // Create - Initialises a complex asset with the given ID in the world state
@@ -139,26 +139,45 @@ func (ca *ComplexAsset) UpdateOwner(ctx *CustomTransactionContext, assetID strin
 }
 
 // UpdateValue - Updates a complex asset with given ID in the world state to have a new value by adding the passed value to its existing value
-func (ca *ComplexAsset) UpdateValue(ctx *CustomTransactionContext, assetID string, additionalValue string) error {
-	additionalValueInt, err := strconv.Atoi(additionalValue)
-
-	if err != nil {
-		return fmt.Errorf("Cannot use passed value %s as value. It is not an integer", additionalValue)
-	}
-
+func (ca *ComplexAsset) UpdateValue(ctx *CustomTransactionContext, assetID string, additionalValue int) error {
 	existing := ctx.callData
 
 	if existing == nil {
 		return fmt.Errorf("Cannot update asset. Asset with id %s does not exist", assetID)
 	}
 
-	err = json.Unmarshal(existing, ca)
+	err := json.Unmarshal(existing, ca)
 
 	if err != nil {
 		return fmt.Errorf("Asset with id %s is not a ComplexAsset", assetID)
 	}
 
-	ca.Value += additionalValueInt
+	ca.Value += additionalValue
+
+	err = ctx.PutComplexAsset(assetID, ca)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateColour - Updates a complex asset with given ID in the world state to have a new value by adding the passed value to its existing value
+func (ca *ComplexAsset) UpdateColour(ctx *CustomTransactionContext, assetID string, additionalColours []string) error {
+	existing := ctx.callData
+
+	if existing == nil {
+		return fmt.Errorf("Cannot update asset. Asset with id %s does not exist", assetID)
+	}
+
+	err := json.Unmarshal(existing, ca)
+
+	if err != nil {
+		return fmt.Errorf("Asset with id %s is not a ComplexAsset", assetID)
+	}
+
+	ca.Colour = append(ca.Colour, additionalColours...)
 
 	err = ctx.PutComplexAsset(assetID, ca)
 
@@ -199,10 +218,11 @@ func getAsset(ctx *CustomTransactionContext, assetID string) error {
 	return nil
 }
 
-func handleUnknown(args []string) error {
-	return fmt.Errorf("Unknown function name passed with args %v", args)
-}
+func handleUnknown(ctx *CustomTransactionContext) error {
+	fn, args := ctx.GetStub().GetFunctionAndParameters()
 
+	return fmt.Errorf("Unknown function name %s passed with args %v", fn, args)
+}
 func main() {
 	sac := new(SimpleAsset)
 	sac.SetTransactionContextHandler(new(CustomTransactionContext))
