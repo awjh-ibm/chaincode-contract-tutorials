@@ -22,7 +22,7 @@ touch sacc.go
 ```
 
 ### Housekeeping
-First lets start with some housekeeping. As with every chaincode ours must implement the [Chaincode Interface](https://godoc.org/github.com/hyperledger/fabric/core/chaincode/shim#Chaincode), fortunately the Contract API has a Struct called Contract which implements this and saves us having to write our own implementation. So lets start with importing the Contract API package. Next, let's add a struct `SimpleAsset` which will provide the functions to manage our asset and embed `contractapi.Contract` to ensure it can be used in chaincode.
+First lets start with some housekeeping. As with every chaincode ours must implement the [Chaincode Interface](https://godoc.org/github.com/hyperledger/fabric/core/chaincode/shim#Chaincode), fortunately the Contract API has a Struct called Contract which implements this and saves us having to write our own implementation. So lets start with importing the Contract API package. Next, let's add a struct `SimpleAsset` which will provide the functions to manage our asset. As these functions will form the transactions we want our chaincode to handle we need to ensure that the struct meets the `contractapi.ContractInterface` interface so that it can be used by the contract api to form chaincode. This can be done by manually implementing the interface functions on the struct but the easiest way is to embed `contractapi.Contract` within the struct:
 
 ```
 package main
@@ -38,7 +38,7 @@ type SimpleAsset struct {
 
 ### Adding functions to manage our asset
 Functions that are to be exported to our chaincode must act against a struct embedding contractapi.Contract and must be made public. They also must fit a specific format, they may take in zero or more arguments and return zero, one or two values. The arguments taken in can be any of the following:
-- *contractapi.TransactionContext (or a custom TransactionContext extending this)
+- *contractapi.TransactionContext (or a custom transaction context implementing `contractapi.TransactionContextInterface`)
 - basic Go types:
 	- string
 	- bool
@@ -48,7 +48,7 @@ Functions that are to be exported to our chaincode must act against a struct emb
 	- float64
 
 
-Only zero or one parameter may be of each of the type TransactionContext. There is also the limitation that if a parameter of type TransactionContext is taken in then it must be the first parameter in the definition. Any number of the other types may be taken. They may also take aliases for the above such as byte or rune. An array of slice of the basic Go types may also be taken.
+Only zero or one parameter may be of the type TransactionContext. There is also the limitation that if a parameter of type TransactionContext is taken in then it must be the first parameter in the definition. Any number of the other types may be taken. They may also take aliases for the above such as byte or rune. An array or slice of the basic Go types may also be taken.
 
 Functions can be defined to return zero, one or two values. These can be of types:
 - string
@@ -59,7 +59,7 @@ Functions can be defined to return zero, one or two values. These can be of type
 - float64
 - error
 
-At most one non-error type and one error can be returned. If no error is returned or the error value is nil the value of the other type will be returned to the chaincode interaction request. If nothing is returned then a blank string is returned. An array or slice of the non-error types may also be returned. These will be converted to a JSON format.
+At most one non-error type and one error can be returned. If no error is returned or the error value is nil the value of the other type will be returned to the chaincode interaction request. If nothing is returned then a blank string is returned. An array or slice of the non-error types may also be returned. These will be converted to a JSON format. Again aliases for the above can be used.
 
 #### Create
 The first function we will write will be a create function for the asset. The function will take in an ID for the asset and initialise it in the world state:

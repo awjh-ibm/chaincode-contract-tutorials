@@ -3,7 +3,7 @@
 ## Calling functions every time a request is made
 Sometimes functions in a contract may all have to repeat the same task. The Contract API provides provision for you to set a function to be called before and after each time a contract used in the chaincode is called.
 
-For example each function in the [simple asset chaincode](samples/simple_asset_contract/simple-asset.go) performs the same action at the start, reading the world state using the passed asset ID. We could therefore define a function to be called before each call to perform this action. We can then use the returned asset in our already defined functions by storing it in the transaction context. To do this we must define our own custom transaction context which contains space to store this value:
+For example each function in the [simple asset chaincode](samples/simple_asset_contract/simple-asset.go) performs the same action at the start, reading the world state using the passed asset ID. We could therefore define a function to be called before each call to perform this action. We can then use the returned asset in our already defined functions by storing it in the transaction context. To do this we must define our own custom transaction context which contains space to store this value so that it can be accessed by the main function call. Custom transaction contexts must implement the `contractapi.TransactionContextInterface` interface, we could do this by manually adding the functions of that interface but as we only want to extend the default transaction context we will embed that into our definition instead:
 
 ```
 // CustomTransactionContext - extends contractapi.TransactionContext with a field to store retrieved simple assets
